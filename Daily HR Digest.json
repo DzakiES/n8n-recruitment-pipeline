@@ -1,0 +1,995 @@
+{
+  "name": "Daily HR Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -16,
+        -144
+      ],
+      "id": "bee07c78-e04f-4fba-b661-1cac3d815c13",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo",
+          "mode": "list",
+          "cachedResultName": "CV AI Screening",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Action",
+              "lookupValue": "="
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        -144
+      ],
+      "id": "58563400-24a4-4925-ac3a-aadc85fab245",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "k7oTgOHYe6zh7tpg",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ffcda580-e55e-4425-8ff9-27f2d1166742",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        -144
+      ],
+      "id": "37a0352f-b629-413b-b3da-8b48c109f3f8",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const candidates = $input.all();\n\nlet candidateRows = '';\n\ncandidates.forEach(c => {\n  const d = c.json;\n  const approveUrl = 'https://dzakies.app.n8n.cloud/webhook/approve?email=' + encodeURIComponent(d.Email) + '&name=' + encodeURIComponent(d.Name) + '&token=' + encodeURIComponent(d.Token);\nconst rejectUrl = 'https://dzakies.app.n8n.cloud/webhook/reject?email=' + encodeURIComponent(d.Email) + '&name=' + encodeURIComponent(d.Name) + '&token=' + encodeURIComponent(d.Token);\n\n  candidateRows += `\n    <div style=\"background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:16px;\">\n      \n      <div style=\"display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;\">\n        <div>\n          <p style=\"margin:0;font-size:16px;font-weight:500;\">${d.Name}</p>\n          <p style=\"margin:0;font-size:13px;color:#888;\">${d.Email} · ${d.Phone}</p>\n        </div>\n        <div style=\"background:#f0f7ff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;color:#1d4ed8;\">\n          Score: ${d.Score}/100\n        </div>\n      </div>\n\n      <table style=\"width:100%;font-size:13px;margin-bottom:12px;\">\n        <tr>\n          <td style=\"color:#888;padding:4px 0;width:120px;\">Experience</td>\n          <td style=\"padding:4px 0;\">${d.Experience}</td>\n        </tr>\n        <tr>\n          <td style=\"color:#888;padding:4px 0;\">Skills</td>\n          <td style=\"padding:4px 0;\">${d.Skills}</td>\n        </tr>\n        <tr>\n          <td style=\"color:#888;padding:4px 0;\">AI Suggests</td>\n          <td style=\"padding:4px 0;font-weight:500;color:${d['AI Suggest'] === 'invite' ? '#16a34a' : '#dc2626'};\">${d['AI Suggest']}</td>\n        </tr>\n      </table>\n\n      <div style=\"background:#f0f7ff;border-left:3px solid #3b82f6;padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:8px;\">\n        <p style=\"margin:0;font-size:12px;font-weight:500;color:#1d4ed8;\">Strengths</p>\n        <p style=\"margin:4px 0 0;font-size:12px;\">${d.Strengths}</p>\n      </div>\n\n      <div style=\"background:#fff5f5;border-left:3px solid #ef4444;padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:16px;\">\n        <p style=\"margin:0;font-size:12px;font-weight:500;color:#dc2626;\">Concerns</p>\n        <p style=\"margin:4px 0 0;font-size:12px;\">${d.Concern}</p>\n      </div>\n\n      <a href=\"${approveUrl}\" style=\"display:inline-block;padding:10px 20px;background:#22c55e;color:white;text-decoration:none;border-radius:6px;font-weight:500;font-size:13px;margin-right:8px;\">\n        ✓ Approve\n      </a>\n      <a href=\"${rejectUrl}\" style=\"display:inline-block;padding:10px 20px;background:#ef4444;color:white;text-decoration:none;border-radius:6px;font-weight:500;font-size:13px;\">\n        ✗ Reject\n      </a>\n\n    </div>\n  `;\n});\n\nconst fullEmail = `\n<div style=\"font-family:Arial,sans-serif;max-width:680px;padding:20px;color:#333;\">\n  \n  <h2 style=\"font-size:20px;font-weight:500;margin-bottom:4px;\">Daily recruitment digest</h2>\n  <p style=\"color:#888;font-size:13px;margin-bottom:24px;\">${candidates.length} candidate${candidates.length > 1 ? 's' : ''} pending your review — ${new Date().toDateString()}</p>\n\n  ${candidateRows}\n\n  <p style=\"font-size:11px;color:#bbb;margin-top:24px;border-top:1px solid #eee;padding-top:16px;\">\n    This digest is sent automatically every day at 9am. Candidates with no decision after 48 hours will receive a follow-up from the system.\n  </p>\n\n</div>\n`;\n\nreturn [{ json: { emailHtml: fullEmail, count: candidates.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        -176
+      ],
+      "id": "55f6f432-e002-41e4-8e13-a6758200c53f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "kevodtest@gmail.com",
+        "subject": "=Daily Recruitment Digest — {{ $json.count }} candidate(s) pending review — {{ $now.format('DD MMM YYYY') }}",
+        "message": "={{ $json.emailHtml }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        -176
+      ],
+      "id": "a77b32b9-f113-40f2-bf25-22775f388f9e",
+      "name": "Send a message",
+      "webhookId": "dcbfec45-5f80-48de-926a-267518962c52",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "stc3PjRnshFPX2ht",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "approve",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f19d018d-0bcc-4547-8dbe-03d8a42d66ea",
+      "name": "Approve Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        176
+      ],
+      "webhookId": "d2825687-95fa-4263-860a-6f5083a28031"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo",
+          "mode": "list",
+          "cachedResultName": "CV AI Screening",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Action": "Approved",
+            "Token": "=``",
+            "Applied_at": "={{ $('Get row(s) in sheet1').item.json.Applied_at }}"
+          },
+          "matchingColumns": [
+            "Applied_at"
+          ],
+          "schema": [
+            {
+              "id": "Token",
+              "displayName": "Token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Experience",
+              "displayName": "Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Skills",
+              "displayName": "Skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "AI Suggest",
+              "displayName": "AI Suggest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Strengths",
+              "displayName": "Strengths",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Concern",
+              "displayName": "Concern",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Applied_at",
+              "displayName": "Applied_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Interview_Date",
+              "displayName": "Interview_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "037b0d11-2f3b-45ca-8965-a332db3dd137",
+      "name": "Update Approved Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        80
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "k7oTgOHYe6zh7tpg",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "reject",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e9f6210c-6b2d-49dd-bdc7-7d66b8935b26",
+      "name": "Reject Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        592
+      ],
+      "webhookId": "4985b51f-4911-48e6-bc5b-3bca90c33b76"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo",
+          "mode": "list",
+          "cachedResultName": "CV AI Screening",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Action": "Rejected",
+            "Token": "``",
+            "Applied_at": "={{ $('Get row(s) in sheet2').item.json.Applied_at }}"
+          },
+          "matchingColumns": [
+            "Applied_at"
+          ],
+          "schema": [
+            {
+              "id": "Token",
+              "displayName": "Token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Experience ",
+              "displayName": "Experience ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Skills",
+              "displayName": "Skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "AI Suggest",
+              "displayName": "AI Suggest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Strengths",
+              "displayName": "Strengths",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Concern",
+              "displayName": "Concern",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Applied_at",
+              "displayName": "Applied_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Interview_Date",
+              "displayName": "Interview_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f2ba1da4-82ff-472c-90ac-7a2fc8c0b7dc",
+      "name": "Update Rejected Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        496
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "k7oTgOHYe6zh7tpg",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "You've been shortlisted! — Software Developer Role",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;padding:20px;color:#333;line-height:1.7;\">    <h2 style=\"font-size:18px;font-weight:500;color:#16a34a;\">Great news, {{ $json.Email }}! 🎉</h2>    <p>Thank you for applying for the <strong>Software Developer</strong> position. After carefully reviewing your application and CV, we're excited to invite you to the next stage of our recruitment process.</p>    <div style=\"background:#f0fdf4;border-left:4px solid #22c55e;padding:14px 18px;border-radius:0 8px 8px 0;margin:20px 0;\">     <p style=\"margin:0 0 6px;font-weight:500;font-size:13px;color:#16a34a;\">What happens next</p>     <p style=\"margin:0;font-size:13px;\">Our team will reach out within <strong>1-2 business days</strong> with the interview date, time, and video call link. The interview will take approximately 45-60 minutes.</p>   </div>    <p>In the meantime, please reply to this email to confirm you're still interested and available for an interview this week or next.</p>    <p>We look forward to speaking with you!</p>    <p>Talk soon,<br>   <strong>The Hiring Team</strong></p>    <hr style=\"border:none;border-top:1px solid #eee;margin:24px 0;\">   <p style=\"font-size:11px;color:#bbb;\">This email was sent automatically via our recruitment pipeline. Please reply directly to this email if you have any questions.</p>  </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        656,
+        80
+      ],
+      "id": "7dd96a86-a8b4-40a3-bdaa-59759de8ec7e",
+      "name": "Send a message1",
+      "webhookId": "5fcc8dd5-77f5-4cd3-943f-7f5135fb7071",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "stc3PjRnshFPX2ht",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Your application for Software Developer — Update",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;padding:20px;color:#333;line-height:1.7;\">    <h2 style=\"font-size:18px;font-weight:500;\">Thank you for your application</h2>    <p>Hi {{ $json.Name }},</p>    <p>Thank you for taking the time to apply for the <strong>Software Developer</strong> position and for sharing your CV and cover letter with us. We genuinely appreciate your interest.</p>    <div style=\"background:#fafafa;border-left:4px solid #d1d5db;padding:14px 18px;border-radius:0 8px 8px 0;margin:20px 0;\">     <p style=\"margin:0;font-size:13px;\">After careful consideration of all applications, we won't be moving forward with your application at this time. This was a competitive process and the decision was not easy.</p>   </div>    <p>We encourage you to keep building your skills and experience — the tech industry moves fast and we'd love to see you apply again in the future as you grow.</p>    <p>We wish you all the best in your job search and future career.</p>    <p>Warm regards,<br>   <strong>The Hiring Team</strong></p>    <hr style=\"border:none;border-top:1px solid #eee;margin:24px 0;\">   <p style=\"font-size:11px;color:#bbb;\">This email was sent automatically via our recruitment pipeline.</p>  </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        656,
+        496
+      ],
+      "id": "64bef340-4e98-4a51-8d2c-5c6b75731104",
+      "name": "Send a message2",
+      "webhookId": "dbb04072-930d-4c73-b4eb-8f8d0b41f65e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "stc3PjRnshFPX2ht",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<html>\n<body style=\"font-family:Arial,sans-serif;text-align:center;padding:80px 20px;\">\n  <h2 style=\"color:#22c55e;font-size:24px;\">✓ Approved!</h2>\n  <p style=\"color:#666;\">Interview invite has been sent to the candidate.</p>\n  <p style=\"color:#999;font-size:13px;\">You can close this tab.</p>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1104,
+        80
+      ],
+      "id": "392c2e0a-e539-4e13-9d09-f62ce397e3cc",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<html>\n<body style=\"font-family:Arial,sans-serif;text-align:center;padding:80px 20px;\">\n  <h2 style=\"color:#ef4444;font-size:24px;\">✗ Rejected</h2>\n  <p style=\"color:#666;\">Rejection email has been sent to the candidate.</p>\n  <p style=\"color:#999;font-size:13px;\">You can close this tab.</p>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1104,
+        496
+      ],
+      "id": "67b6deb6-8271-48bc-81de-7d05e1358ea4",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo",
+          "mode": "list",
+          "cachedResultName": "CV AI Screening",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.query.email }}"
+            },
+            {
+              "lookupColumn": "Action"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        176
+      ],
+      "id": "2fda5733-51e3-4074-be4d-b1171183d158",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "k7oTgOHYe6zh7tpg",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Status Code: 403 / Invalid or expired token",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        656,
+        272
+      ],
+      "id": "ec0b777e-f0ae-4c9a-ba85-85a4144e4ff3",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo",
+          "mode": "list",
+          "cachedResultName": "CV AI Screening",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.query.email }}"
+            },
+            {
+              "lookupColumn": "Action"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        592
+      ],
+      "id": "0696108f-0d80-4d46-931e-ebd490bcadc1",
+      "name": "Get row(s) in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "k7oTgOHYe6zh7tpg",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "40a6907b-b0c5-46e5-83be-f522b8d73359",
+              "leftValue": "={{ $('Reject Webhook').item.json.query.token }}",
+              "rightValue": "={{ $('Get row(s) in sheet2').first().json.Token }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        592
+      ],
+      "id": "cc0a4619-0a18-4fa2-bff6-fcf1eb08984e",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Status Code: 403 / Invalid or expired token",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        656,
+        688
+      ],
+      "id": "881c1552-8b49-40d7-8eaf-5211adf4c005",
+      "name": "Respond to Webhook3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "40a6907b-b0c5-46e5-83be-f522b8d73359",
+              "leftValue": "={{ $('Approve Webhook').item.json.query.token }}",
+              "rightValue": "={{ $('Get row(s) in sheet1').first().json.Token }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        176
+      ],
+      "id": "46077ca0-1603-4a99-b2f3-bf18add5f5ef",
+      "name": "If3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reject Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "Update Approved Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message2": {
+      "main": [
+        [
+          {
+            "node": "Update Rejected Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "Update Approved Row": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Rejected Row": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet2": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "06c45391-7b09-4df1-9c4f-b3551bec545a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "933a06c2b111f542b51e9a7b9c8e2732e01499649d8a620b94eac921169f384d"
+  },
+  "id": "xBqSmoFWI7WN04YF",
+  "tags": []
+}
