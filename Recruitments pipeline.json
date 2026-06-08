@@ -1,0 +1,428 @@
+{
+  "name": "Recruitments pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Application Form",
+        "formDescription": "FILL THIS FORM FOR YOUR APPLICATION",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "What is your name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "What is your Email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone Number [e.g. +62 1234567890]",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Do you have any experience?"
+            },
+            {
+              "fieldLabel": "Tell us about your skills"
+            },
+            {
+              "fieldLabel": "Upload you cv here",
+              "fieldType": "file",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Cover Letter (Optional)",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d61b92f0-1030-4303-8d52-231ecaec5e6f",
+      "name": "On form submission",
+      "webhookId": "f8a52551-76e6-4419-97bd-c2ff43d55a7d"
+    },
+    {
+      "parameters": {
+        "resource": "document",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "You are a senior HR screener. Evaluate this candidate for a Software Developer role.\n\nCandidate info already collected:\nName: {{ $('On form submission').item.json['What is your name'] }}\nEmail: {{ $('On form submission').item.json['What is your Email'] }}\nExperience: {{ $('On form submission').item.json['Do you have any experience?'] }}\nSkills: {{ $('On form submission').item.json['Tell us about your skills'] }}\nCover letter: {{ $('On form submission').item.json['Cover Letter (Optional)'] }}\n\nRequired skills: JavaScript, React, minimum 1 year experience\nNice to have: TypeScript, Node.js, automation tools\n\nRead the attached CV to verify and add to what we already know. Respond ONLY in raw JSON:\n{\n  \"score\": (0-100),\n  \"qualified\": (true or false),\n  \"strengths\": \"2-3 sentence summary\",\n  \"concerns\": \"1-2 sentence summary\",\n  \"recommended_action\": \"invite\" or \"reject\"\n}",
+        "inputType": "binary",
+        "binaryPropertyName": "=Upload_you_cv_here",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        192,
+        0
+      ],
+      "id": "d76fe466-5e26-4329-badb-dcecad327583",
+      "name": "Analyze document",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "4J1qr684cMXhlTb0",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\n\nconst raw = $input.first().json.content.parts[0].text;\nconst form = $('On form submission').first().json;\nconst cleaned = raw.replace(/```json\\n?/g, '').replace(/```/g, '').trim();\nconst ai = JSON.parse(cleaned);\n\n// Generate a unique token for this candidate\nconst token = crypto.randomBytes(32).toString('hex');\nconst email = encodeURIComponent(form['What is your Email']);\nconst name = encodeURIComponent(form['What is your name']);\n\nreturn [{\n  json: {\n    name: form['What is your name'],\n    email: form['What is your Email'],\n    phone: form['Phone Number [e.g. +62 1234567890]'],\n    experience: form['Do you have any experience?'],\n    skills: form['Tell us about your skills'],\n    ai_score: ai.score,\n    qualified: ai.qualified,\n    strengths: ai.strengths,\n    concerns: ai.concerns,\n    recommended_action: ai.recommended_action,\n    applied_at: new Date().toISOString(),\n    interview_date: '',\n    approval_token: token,  // ← store this in Google Sheets\n    approve_url: `https://dzakies.app.n8n.cloud/webhook/approve?email=${email}&name=${name}&token=${token}`,\n    reject_url: `https://dzakies.app.n8n.cloud/webhook/reject?email=${email}&name=${name}&token=${token}`,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "78f55ad3-75f8-4acf-8928-58e9d95d1f4d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo",
+          "mode": "list",
+          "cachedResultName": "CV AI Screening",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JJfUsbyZA_dY9hnALgPplE9Zf-pJXlbNA2ckmqicVKo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Phone": "={{ $json.phone }}",
+            "Skills": "={{ $json.skills }}",
+            "Score": "={{ $json.ai_score }}",
+            "Strengths": "={{ $json.strengths }}",
+            "Concern": "={{ $json.concerns }}",
+            "Applied_at": "={{ $json.applied_at }}",
+            "AI Suggest": "={{ $json.recommended_action }}",
+            "Token": "={{ $json.approval_token }}",
+            "Experience": "={{ $json.experience }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "Token",
+              "displayName": "Token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Experience",
+              "displayName": "Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Skills",
+              "displayName": "Skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Suggest",
+              "displayName": "AI Suggest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Strengths",
+              "displayName": "Strengths",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Concern",
+              "displayName": "Concern",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Applied_at",
+              "displayName": "Applied_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Interview_Date",
+              "displayName": "Interview_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        608,
+        0
+      ],
+      "id": "03659e3d-0fcd-48c7-b3f1-67224fe2909e",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "k7oTgOHYe6zh7tpg",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Thank You for Applying — We've Received Your Application!",
+        "message": "=<!DOCTYPE html>\n<html>\n<body style=\"margin:0;padding:0;background-color:#f4f6f9;font-family:Arial,sans-serif;\">\n  <div style=\"max-width:600px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);\">\n    \n    <!-- Header -->\n    <div style=\"background:linear-gradient(135deg,#1d4ed8,#3b82f6);padding:40px 32px;text-align:center;\">\n      <h1 style=\"margin:0;color:#ffffff;font-size:24px;font-weight:600;\">Application Received! 🎉</h1>\n      <p style=\"margin:8px 0 0;color:#bfdbfe;font-size:14px;\">We're excited to review your profile</p>\n    </div>\n\n    <!-- Body -->\n    <div style=\"padding:32px;\">\n      <p style=\"margin:0 0 16px;font-size:15px;color:#374151;\">Hi <strong>{{ $json.Name }}</strong>,</p>\n      <p style=\"margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;\">\n        Thank you for applying! We've successfully received your application and our team is currently reviewing it. We'll be in touch soon with the next steps.\n      </p>\n\n      <!-- Summary Card -->\n      <div style=\"background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:24px;\">\n        <p style=\"margin:0 0 12px;font-size:13px;font-weight:600;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.5px;\">Your Submission Summary</p>\n        <table style=\"width:100%;font-size:13px;border-collapse:collapse;\">\n          <tr>\n            <td style=\"padding:8px 0;color:#9ca3af;width:110px;vertical-align:top;\">Name</td>\n            <td style=\"padding:8px 0;color:#111827;font-weight:500;\">{{ $json.Name }}</td>\n          </tr>\n          <tr style=\"border-top:1px solid #f0f0f0;\">\n            <td style=\"padding:8px 0;color:#9ca3af;vertical-align:top;\">Email</td>\n            <td style=\"padding:8px 0;color:#111827;\">{{ $json.Email }}</td>\n          </tr>\n          <tr style=\"border-top:1px solid #f0f0f0;\">\n            <td style=\"padding:8px 0;color:#9ca3af;vertical-align:top;\">Phone</td>\n            <td style=\"padding:8px 0;color:#111827;\">{{ $json.Phone }}</td>\n          </tr>\n          <tr style=\"border-top:1px solid #f0f0f0;\">\n            <td style=\"padding:8px 0;color:#9ca3af;vertical-align:top;\">Experience</td>\n            <td style=\"padding:8px 0;color:#111827;\">{{ $json['Experience '] }}</td>\n          </tr>\n          <tr style=\"border-top:1px solid #f0f0f0;\">\n            <td style=\"padding:8px 0;color:#9ca3af;vertical-align:top;\">Skills</td>\n            <td style=\"padding:8px 0;color:#111827;\">{{ $json.Skills }}</td>\n          </tr>\n        </table>\n      </div>\n\n      <!-- What's Next -->\n      <div style=\"background:#eff6ff;border-left:4px solid #3b82f6;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:24px;\">\n        <p style=\"margin:0 0 8px;font-size:13px;font-weight:600;color:#1d4ed8;\">What happens next?</p>\n        <ol style=\"margin:0;padding-left:18px;font-size:13px;color:#374151;line-height:1.8;\">\n          <li>Our team reviews your application</li>\n          <li>You'll receive an email with the decision</li>\n          <li>If selected, we'll schedule an interview</li>\n        </ol>\n      </div>\n\n      <p style=\"margin:0;font-size:13px;color:#6b7280;\">\n        If you have any questions, feel free to reply to this email.\n      </p>\n    </div>\n\n    <!-- Footer -->\n    <div style=\"background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;\">\n      <p style=\"margin:0;font-size:12px;color:#9ca3af;\">\n        This is an automated message — please do not reply directly.<br/>\n        © {{ new Date().getFullYear() }} Recruitment Team. All rights reserved.\n      </p>\n    </div>\n\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        -128
+      ],
+      "id": "9ad0c39a-c2cb-43b2-8473-d92b915067e9",
+      "name": "Send a message to candidate",
+      "webhookId": "0dc3b655-c77c-47fa-b0f0-0d1cedc819da",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "stc3PjRnshFPX2ht",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1683c6bb-7e34-4b25-bbd1-161a8257033f",
+              "leftValue": "={{ $json['AI Suggest'] }}",
+              "rightValue": "invite",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        784,
+        128
+      ],
+      "id": "76d29a9e-3cca-4379-9cea-c2ec7575ba24",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "=kevodtest@gmail.com",
+        "subject": "=New Application — {{ $json.Name }} | Score: {{ $json.Score }}/100 | AI Suggests: {{ $json['AI Suggest'] }}",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;padding:20px;color:#333;line-height:1.7;\">\n\n  <h2 style=\"font-size:18px;font-weight:500;margin-bottom:4px;\">New candidate application</h2>\n  <p style=\"color:#888;font-size:13px;margin-bottom:20px;\">Submitted {{ $('Code in JavaScript').item.json.applied_at }}</p>\n\n  <table style=\"width:100%;font-size:14px;margin-bottom:20px;border-collapse:collapse;\">\n    <tr><td style=\"color:#888;padding:6px 0;width:140px;border-bottom:1px solid #f0f0f0;\">Name</td><td style=\"padding:6px 0;border-bottom:1px solid #f0f0f0;\"><strong>{{ $json.Name }}</strong></td></tr>\n    <tr><td style=\"color:#888;padding:6px 0;border-bottom:1px solid #f0f0f0;\">Email</td><td style=\"padding:6px 0;border-bottom:1px solid #f0f0f0;\">{{ $json.Email }}</td></tr>\n    <tr><td style=\"color:#888;padding:6px 0;border-bottom:1px solid #f0f0f0;\">Phone</td><td style=\"padding:6px 0;border-bottom:1px solid #f0f0f0;\">{{ $json.Phone }}</td></tr>\n    <tr><td style=\"color:#888;padding:6px 0;border-bottom:1px solid #f0f0f0;\">Experience</td><td style=\"padding:6px 0;border-bottom:1px solid #f0f0f0;\">{{ $json['Experience '] }}</td></tr>\n    <tr><td style=\"color:#888;padding:6px 0;border-bottom:1px solid #f0f0f0;\">Skills</td><td style=\"padding:6px 0;border-bottom:1px solid #f0f0f0;\">{{ $json.Skills }}</td></tr>\n    <tr><td style=\"color:#888;padding:6px 0;\">AI Score</td><td style=\"padding:6px 0;\"><strong>{{ $json.Score }}/100</strong></td></tr>\n  </table>\n\n  <div style=\"background:#f0f7ff;border-left:4px solid #3b82f6;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:12px;\">\n    <p style=\"margin:0 0 6px;font-weight:500;font-size:13px;color:#1d4ed8;\">Strengths</p>\n    <p style=\"margin:0;font-size:13px;\">{{ $json.Strengths }}</p>\n  </div>\n\n  <div style=\"background:#fff5f5;border-left:4px solid #ef4444;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;\">\n    <p style=\"margin:0 0 6px;font-weight:500;font-size:13px;color:#dc2626;\">Concerns</p>\n    <p style=\"margin:0;font-size:13px;\">{{ $json.Concern }}</p>\n  </div>\n\n  <p style=\"font-size:13px;color:#888;margin-bottom:16px;\">AI suggestion: <strong style=\"color:#333;\">{{ $json['AI Suggest'] }}</strong> — click a button below to send the candidate their email instantly.</p>\n\n  <a href=\"{{ $('Code in JavaScript').item.json.approve_url }}\" style=\"display:inline-block;padding:12px 28px;background:#22c55e;color:white;text-decoration:none;border-radius:6px;font-weight:500;margin-right:12px;font-size:14px;\">\n    ✓ Approve — send interview invite\n  </a>\n\n  <a href=\"{{ $('Code in JavaScript').item.json.reject_url }}\" style=\"display:inline-block;padding:12px 28px;background:#ef4444;color:white;text-decoration:none;border-radius:6px;font-weight:500;font-size:14px;\">\n    ✗ Reject — send rejection email\n  </a>\n\n  <p style=\"font-size:11px;color:#bbb;margin-top:24px;\">This email was generated automatically by your n8n recruitment pipeline.</p>\n\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        48
+      ],
+      "id": "af4e299c-1085-4fc1-9776-ba44088d04c6",
+      "name": "Send to HR if candidate is good",
+      "webhookId": "6493ae71-3c5f-4778-8da0-a8636d26b769",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "stc3PjRnshFPX2ht",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Analyze document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze document": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message to candidate",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send to HR if candidate is good",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a90bd103-ad7d-4303-91c6-99485dd6598d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "933a06c2b111f542b51e9a7b9c8e2732e01499649d8a620b94eac921169f384d"
+  },
+  "id": "7QJr2VUWXIQvrm95",
+  "tags": []
+}
